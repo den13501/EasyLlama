@@ -25,7 +25,7 @@
   <String key="Button.Stop" value="停止" />
   <String key="Button.WebUi" value="開啟 Web UI" />
   <String key="Check.EnableSpec" value="啟用推測解碼（建議 draft-mtp）" />
-  <String key="Check.NoMmap" value="停用 mmap（新版自動改用 --load-mode none）" />
+  <String key="Check.NoMmap" value="不使用 mmap，啟動時直接把整份模型讀進記憶體" />
   <String key="Check.ReasoningPreserve" value="保留思考內容 --reasoning-preserve" />
   <String key="Check.ShowConsole" value="另外開啟主控台視窗（不擷取輸出到下方紀錄）" />
   <String key="Check.UseChatTemplate" value="外掛聊天模板 --chat-template-file" />
@@ -46,7 +46,7 @@
   <String key="Field.ImageMinTokens" value="影像最小 token" />
   <String key="Field.KvCache" value="KV cache" />
   <String key="Field.LlamaServer" value="llama-server.exe" />
-  <String key="Field.LoadMode" value="載入方式" />
+  <String key="Field.LoadMode" value="模型載入方式" />
   <String key="Field.Mmproj" value="視覺投影" />
   <String key="Field.MmprojFile" value="mmproj 檔案" />
   <String key="Field.Model" value="模型 GGUF" />
@@ -61,16 +61,18 @@
   <String key="Field.SpecEnable" value="開關" />
   <String key="Field.SpecType" value="--spec-type" />
   <String key="Field.Threads" value="CPU 執行緒 --threads" />
+  <String key="Field.TunerScope" value="適用前提" />
   <String key="Field.ThreadsBatch" value="批次執行緒 --threads-batch" />
   <String key="Field.Ubatch" value="ubatch -ub" />
-  <String key="Hint.CacheRam" value="單位 MiB。官方預設只有 8192，長對話會被清掉導致每輪重算；辦公建議 16384，火力全開 32768（-1 不限制）" />
+  <String key="Hint.CacheRam" value="單位 MiB，是「上限」不是固定佔用，長對話會慢慢長到這個數字。設太大會把記憶體吃光而嚴重掉速：32GB 機器跑 16GB 模型時建議 2048~4096，不要照抄大記憶體的設定" />
   <String key="Hint.ChatTemplate" value="⚠ 只有官方版模型需要（froggeric 修正模板）。JonathanColetti 版內建模板，勾了會吐出模板原始碼且看圖 400" />
-  <String key="Hint.ContextSize" value="日常與 Agent 甜蜜點 65536；盲開 131072 會拖慢首字並多吃顯存" />
+  <String key="Hint.ContextSize" value="★ 不是愈大愈好。超過顯卡負荷會掉到十分之一速度（24GB 卡跑 27B Q4 實測：32768 約 55 t/s，65536 只剩 9 t/s）。要吃大檔請分段餵，別硬開大" />
   <String key="Hint.DraftKv" value="建議 q8_0，draft 模型很小不佔顯存" />
   <String key="Hint.FlashAttn" value="建議 on；KV 用量化型別時必須開啟" />
   <String key="Hint.GpuLayers" value="99 = 全部丟給 GPU；顯存不足時才調降" />
   <String key="Hint.ImageMinTokens" value="Qwen-VL 看圖建議 1024" />
   <String key="Hint.KvCache" value="24GB 顯卡建議 q8_0；顯存吃緊再降 q5_0 / q4_0" />
+  <String key="Hint.NoMmap" value="★ 一般情況不用勾。不勾 = 交給 llama.cpp 預設（auto，實際就是 mmap），記憶體省很多；勾了 = 送 --load-mode none，會額外吃掉一份等同模型大小的記憶體。記憶體不到模型 2 倍時勾了容易嚴重掉速" />
   <String key="Hint.Parallel" value="單人使用填 1，可獨享完整上下文；多人共用才調高" />
   <String key="Hint.Reasoning" value="Uncensored 版建議 off 省 token；官方版 + 修正模板用 auto" />
   <String key="Hint.ReasoningPreserve" value="搭配官方版 + 修正模板使用，可讓多輪對話的 prefix cache 100% 命中" />
@@ -112,8 +114,9 @@
   <String key="Msg.StartedConsole" value="已在獨立主控台啟動。關閉該視窗或按停止即可結束。" />
   <String key="Msg.Starting" value="[啟動] {0}" />
   <String key="Msg.Stopping" value="[停止] 已送出結束。" />
-  <String key="Msg.UsesLoadMode" value="此版本使用 --load-mode 取代 --no-mmap。" />
-  <String key="Msg.UsesNoMmap" value="此版本仍使用 --no-mmap。" />
+  <String key="Msg.TunerScope" value="以下建議值是針對「文書電腦 + 後裝顯示卡」的環境調校：顯卡記憶體較充裕，但主記憶體與 CPU 要留給其他辦公軟體。若你的機器並非這種組合，請把建議值當參考，依實際狀況自行調整。" />
+  <String key="Msg.UsesLoadMode" value="此版本用 --load-mode 控制載入方式（取代舊的 --no-mmap）。" />
+  <String key="Msg.UsesNoMmap" value="此版本仍使用舊的 --no-mmap 控制載入方式。" />
   <String key="Status.FileMissing" value="找不到檔案" />
   <String key="Status.NotSpecified" value="未指定" />
   <String key="Status.NotUsed" value="未使用" />

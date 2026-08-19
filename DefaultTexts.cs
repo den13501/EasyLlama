@@ -54,6 +54,7 @@ namespace LlamaVulkanLauncher
             map["Tab.Paths"] = "路徑與檔案";
             map["Tab.Inference"] = "推論與裝置";
             map["Tab.Optimize"] = "本機最佳化";
+            map["Field.TunerScope"] = "適用前提";
             map["Tab.Spec"] = "推測解碼 MTP";
             map["Tab.Server"] = "伺服器與進階";
 
@@ -71,7 +72,7 @@ namespace LlamaVulkanLauncher
             map["Field.FlashAttn"] = "Flash Attention -fa";
             map["Field.Reasoning"] = "思考 --reasoning";
             map["Field.Ubatch"] = "ubatch -ub";
-            map["Field.LoadMode"] = "載入方式";
+            map["Field.LoadMode"] = "模型載入方式";
             map["Field.ImageMinTokens"] = "影像最小 token";
             map["Field.CacheRam"] = "提示快取 --cache-ram";
             map["Field.Parallel"] = "並行 slot --parallel";
@@ -94,21 +95,22 @@ namespace LlamaVulkanLauncher
             map["Check.UseMmproj"] = "啟用視覺 mmproj";
             map["Check.UseChatTemplate"] = "外掛聊天模板 --chat-template-file";
             map["Check.ReasoningPreserve"] = "保留思考內容 --reasoning-preserve";
-            map["Check.NoMmap"] = "停用 mmap（新版自動改用 --load-mode none）";
+            map["Check.NoMmap"] = "不使用 mmap，啟動時直接把整份模型讀進記憶體";
             map["Check.EnableSpec"] = "啟用推測解碼（建議 draft-mtp）";
             map["Check.ShowConsole"] = "另外開啟主控台視窗（不擷取輸出到下方紀錄）";
         }
 
         private static void FillHints(Dictionary<string, string> map)
         {
-            map["Hint.ContextSize"] = "日常與 Agent 甜蜜點 65536；盲開 131072 會拖慢首字並多吃顯存";
+            map["Hint.ContextSize"] = "★ 不是愈大愈好。超過顯卡負荷會掉到十分之一速度（24GB 卡跑 27B Q4 實測：32768 約 55 t/s，65536 只剩 9 t/s）。要吃大檔請分段餵，別硬開大";
             map["Hint.GpuLayers"] = "99 = 全部丟給 GPU；顯存不足時才調降";
             map["Hint.KvCache"] = "24GB 顯卡建議 q8_0；顯存吃緊再降 q5_0 / q4_0";
             map["Hint.FlashAttn"] = "建議 on；KV 用量化型別時必須開啟";
             map["Hint.Reasoning"] = "Uncensored 版建議 off 省 token；官方版 + 修正模板用 auto";
             map["Hint.Ubatch"] = "256 為建議值；顯存吃緊可降 128";
+            map["Hint.NoMmap"] = "★ 一般情況不用勾。不勾 = 交給 llama.cpp 預設（auto，實際就是 mmap），記憶體省很多；勾了 = 送 --load-mode none，會額外吃掉一份等同模型大小的記憶體。記憶體不到模型 2 倍時勾了容易嚴重掉速";
             map["Hint.ImageMinTokens"] = "Qwen-VL 看圖建議 1024";
-            map["Hint.CacheRam"] = "單位 MiB。官方預設只有 8192，長對話會被清掉導致每輪重算；辦公建議 16384，火力全開 32768（-1 不限制）";
+            map["Hint.CacheRam"] = "單位 MiB，是「上限」不是固定佔用，長對話會慢慢長到這個數字。設太大會把記憶體吃光而嚴重掉速：32GB 機器跑 16GB 模型時建議 2048~4096，不要照抄大記憶體的設定";
             map["Hint.Parallel"] = "單人使用填 1，可獨享完整上下文；多人共用才調高";
             map["Hint.ChatTemplate"] = "⚠ 只有官方版模型需要（froggeric 修正模板）。JonathanColetti 版內建模板，勾了會吐出模板原始碼且看圖 400";
             map["Hint.ReasoningPreserve"] = "搭配官方版 + 修正模板使用，可讓多輪對話的 prefix cache 100% 命中";
@@ -122,11 +124,14 @@ namespace LlamaVulkanLauncher
 
         private static void FillMessages(Dictionary<string, string> map)
         {
+            map["Msg.TunerScope"] = "以下建議值是針對「文書電腦 + 後裝顯示卡」的環境調校："
+                + "顯卡記憶體較充裕，但主記憶體與 CPU 要留給其他辦公軟體。"
+                + "若你的機器並非這種組合，請把建議值當參考，依實際狀況自行調整。";
             map["Msg.SettingsPath"] = "設定檔位置：{0}";
             map["Msg.Loaded"] = "設定已載入。裝置清單請按「偵測裝置」；初次建議在「本機最佳化」。";
             map["Msg.CapabilitiesRead"] = "已讀取 llama-server 支援的參數（{0} 個）。";
-            map["Msg.UsesLoadMode"] = "此版本使用 --load-mode 取代 --no-mmap。";
-            map["Msg.UsesNoMmap"] = "此版本仍使用 --no-mmap。";
+            map["Msg.UsesLoadMode"] = "此版本用 --load-mode 控制載入方式（取代舊的 --no-mmap）。";
+            map["Msg.UsesNoMmap"] = "此版本仍使用舊的 --no-mmap 控制載入方式。";
             map["Msg.DetectingDevices"] = "正在偵測裝置（最多 5 秒）…";
             map["Msg.DetectingBusy"] = "裝置偵測進行中，請稍候…";
             map["Msg.DevicesFound"] = "偵測到裝置：{0}";

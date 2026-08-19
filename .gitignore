@@ -19,7 +19,10 @@ NuGet.Config.portable-backup
 
 # 打包輸出
 release/
+staging/
+staging-test/
 *.zip
+SHA256SUMS.txt
 
 # Visual Studio / Rider
 .vs/

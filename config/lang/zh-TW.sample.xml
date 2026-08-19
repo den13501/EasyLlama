@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 翻譯方式：只修改 value 的內容，key 請保持不變。 -->
+<!-- 存成 config\lang\<語言代碼>.xml，再於 config\language.txt 寫入該代碼即可套用。 -->
+<Strings>
+  <String key="App.Status.Loading" value="載入中…" />
+  <String key="App.Status.Running" value="運行中" />
+  <String key="App.Status.Stopped" value="已停止" />
+  <String key="App.Subtitle" value="視覺化設定 llama-server 路徑、模型與啟動參數" />
+  <String key="App.Title" value="Llama Vulkan 啟動器" />
+  <String key="Button.ApplyOffice" value="套用辦公建議" />
+  <String key="Button.Browse" value="瀏覽" />
+  <String key="Button.Clear" value="清除" />
+  <String key="Button.CopyCommand" value="複製指令" />
+  <String key="Button.Delete" value="刪除" />
+  <String key="Button.Detect" value="偵測裝置" />
+  <String key="Button.ExportBat" value="匯出 BAT" />
+  <String key="Button.Later" value="稍後自己調" />
+  <String key="Button.Office" value="辦公並行（建議）" />
+  <String key="Button.Optimize" value="依本機最佳" />
+  <String key="Button.Performance" value="效能優先" />
+  <String key="Button.Refresh" value="重新偵測" />
+  <String key="Button.Save" value="儲存" />
+  <String key="Button.SaveAs" value="另存" />
+  <String key="Button.Start" value="啟動" />
+  <String key="Button.Stop" value="停止" />
+  <String key="Button.WebUi" value="開啟 Web UI" />
+  <String key="Check.EnableSpec" value="啟用推測解碼（建議 draft-mtp）" />
+  <String key="Check.NoMmap" value="停用 mmap（新版自動改用 --load-mode none）" />
+  <String key="Check.ReasoningPreserve" value="保留思考內容 --reasoning-preserve" />
+  <String key="Check.ShowConsole" value="另外開啟主控台視窗（不擷取輸出到下方紀錄）" />
+  <String key="Check.UseChatTemplate" value="外掛聊天模板 --chat-template-file" />
+  <String key="Check.UseMmproj" value="啟用視覺 mmproj" />
+  <String key="Field.CacheRam" value="提示快取 --cache-ram" />
+  <String key="Field.ChatTemplate" value="聊天模板" />
+  <String key="Field.ChatTemplateFile" value="模板檔案" />
+  <String key="Field.Console" value="主控台" />
+  <String key="Field.ContextSize" value="上下文 --ctx-size" />
+  <String key="Field.Device" value="裝置 --device" />
+  <String key="Field.DraftKv" value="Draft KV --spec-draft-type-k/v" />
+  <String key="Field.ExtraArgs" value="額外參數" />
+  <String key="Field.FirstAdvice" value="初次建議" />
+  <String key="Field.FlashAttn" value="Flash Attention -fa" />
+  <String key="Field.GpuLayers" value="GPU 層數 --n-gpu-layers" />
+  <String key="Field.HardwareInfo" value="本機偵測" />
+  <String key="Field.Host" value="監聽位址 --host" />
+  <String key="Field.ImageMinTokens" value="影像最小 token" />
+  <String key="Field.KvCache" value="KV cache" />
+  <String key="Field.LlamaServer" value="llama-server.exe" />
+  <String key="Field.LoadMode" value="載入方式" />
+  <String key="Field.Mmproj" value="視覺投影" />
+  <String key="Field.MmprojFile" value="mmproj 檔案" />
+  <String key="Field.Model" value="模型 GGUF" />
+  <String key="Field.Parallel" value="並行 slot --parallel" />
+  <String key="Field.Port" value="連接埠 --port" />
+  <String key="Field.Priority" value="行程優先權 --prio" />
+  <String key="Field.QuickApply" value="快速套用" />
+  <String key="Field.Reasoning" value="思考 --reasoning" />
+  <String key="Field.ReasoningPreserve" value="思考保留" />
+  <String key="Field.SpecDraftNMax" value="--spec-draft-n-max" />
+  <String key="Field.SpecDraftPMin" value="--spec-draft-p-min" />
+  <String key="Field.SpecEnable" value="開關" />
+  <String key="Field.SpecType" value="--spec-type" />
+  <String key="Field.Threads" value="CPU 執行緒 --threads" />
+  <String key="Field.ThreadsBatch" value="批次執行緒 --threads-batch" />
+  <String key="Field.Ubatch" value="ubatch -ub" />
+  <String key="Hint.CacheRam" value="單位 MiB。官方預設只有 8192，長對話會被清掉導致每輪重算；辦公建議 16384，火力全開 32768（-1 不限制）" />
+  <String key="Hint.ChatTemplate" value="⚠ 只有官方版模型需要（froggeric 修正模板）。JonathanColetti 版內建模板，勾了會吐出模板原始碼且看圖 400" />
+  <String key="Hint.ContextSize" value="日常與 Agent 甜蜜點 65536；盲開 131072 會拖慢首字並多吃顯存" />
+  <String key="Hint.DraftKv" value="建議 q8_0，draft 模型很小不佔顯存" />
+  <String key="Hint.FlashAttn" value="建議 on；KV 用量化型別時必須開啟" />
+  <String key="Hint.GpuLayers" value="99 = 全部丟給 GPU；顯存不足時才調降" />
+  <String key="Hint.ImageMinTokens" value="Qwen-VL 看圖建議 1024" />
+  <String key="Hint.KvCache" value="24GB 顯卡建議 q8_0；顯存吃緊再降 q5_0 / q4_0" />
+  <String key="Hint.Parallel" value="單人使用填 1，可獨享完整上下文；多人共用才調高" />
+  <String key="Hint.Reasoning" value="Uncensored 版建議 off 省 token；官方版 + 修正模板用 auto" />
+  <String key="Hint.ReasoningPreserve" value="搭配官方版 + 修正模板使用，可讓多輪對話的 prefix cache 100% 命中" />
+  <String key="Hint.SpecDraftNMax" value="實測：日常對話 1 最快、寫程式 2~3，超過 3 反而比不開更慢" />
+  <String key="Hint.SpecDraftPMin" value="建議 0.1" />
+  <String key="Hint.SpecType" value="Qwen3.8 支援 MTP，選 draft-mtp 即可" />
+  <String key="Hint.Threads" value="−1 省略由 llama 決定；辦公共存建議 2~3，保留核心給 Office" />
+  <String key="Hint.ThreadsBatch" value="通常與 --threads 相同即可" />
+  <String key="Hint.Ubatch" value="256 為建議值；顯存吃緊可降 128" />
+  <String key="Label.CommandPreview" value="指令預覽" />
+  <String key="Label.Log" value="執行紀錄" />
+  <String key="Label.Profile" value="設定檔" />
+  <String key="Label.Shortcuts" value="F5 啟動    Shift+F5 停止    Ctrl+S 儲存" />
+  <String key="Msg.ApiReady" value="[OK] API 已就緒 {0}" />
+  <String key="Msg.CannotStart" value="無法啟動" />
+  <String key="Msg.CapabilitiesRead" value="已讀取 llama-server 支援的參數（{0} 個）。" />
+  <String key="Msg.CommandCopied" value="已複製指令。" />
+  <String key="Msg.ConfirmDelete" value="確定刪除設定檔「{0}」？" />
+  <String key="Msg.ConfirmExitRunning" value="llama-server 仍在執行，要一併停止並關閉嗎？" />
+  <String key="Msg.ContinueAnyway" value="仍要繼續啟動嗎？" />
+  <String key="Msg.DeletedProfile" value="已刪除設定檔。" />
+  <String key="Msg.DetectingBusy" value="裝置偵測進行中，請稍候…" />
+  <String key="Msg.DetectingDevices" value="正在偵測裝置（最多 5 秒）…" />
+  <String key="Msg.DevicesFound" value="偵測到裝置：{0}" />
+  <String key="Msg.DuplicateName" value="已有同名設定檔。" />
+  <String key="Msg.Exported" value="已匯出：{0}" />
+  <String key="Msg.Loaded" value="設定已載入。裝置清單請按「偵測裝置」；初次建議在「本機最佳化」。" />
+  <String key="Msg.MemoryUnavailable" value="無法讀取系統記憶體資訊。" />
+  <String key="Msg.NeedServerPath" value="請先指定有效的 llama-server.exe。" />
+  <String key="Msg.NoDevices" value="未解析到裝置，可手動輸入 Vulkan0。" />
+  <String key="Msg.NoDevicesDialog" value="沒有偵測到裝置（逾時或輸出無法解析）。可手動輸入 Vulkan0。" />
+  <String key="Msg.PortInUse" value="連接埠 {0} 已被其他程式占用。" />
+  <String key="Msg.PortInUseDetail" value="可能是上一個 llama-server 還沒結束，或換一個連接埠再試。" />
+  <String key="Msg.SavedAsProfile" value="已另存設定檔：{0}" />
+  <String key="Msg.SavedProfile" value="已儲存設定檔：{0}" />
+  <String key="Msg.SaveFailed" value="設定沒有存檔成功：" />
+  <String key="Msg.SettingsMayBeWrong" value="設定可能有問題" />
+  <String key="Msg.SettingsPath" value="設定檔位置：{0}" />
+  <String key="Msg.StartedConsole" value="已在獨立主控台啟動。關閉該視窗或按停止即可結束。" />
+  <String key="Msg.Starting" value="[啟動] {0}" />
+  <String key="Msg.Stopping" value="[停止] 已送出結束。" />
+  <String key="Msg.UsesLoadMode" value="此版本使用 --load-mode 取代 --no-mmap。" />
+  <String key="Msg.UsesNoMmap" value="此版本仍使用 --no-mmap。" />
+  <String key="Status.FileMissing" value="找不到檔案" />
+  <String key="Status.NotSpecified" value="未指定" />
+  <String key="Status.NotUsed" value="未使用" />
+  <String key="Tab.Inference" value="推論與裝置" />
+  <String key="Tab.Optimize" value="本機最佳化" />
+  <String key="Tab.Paths" value="路徑與檔案" />
+  <String key="Tab.Server" value="伺服器與進階" />
+  <String key="Tab.Spec" value="推測解碼 MTP" />
+</Strings>

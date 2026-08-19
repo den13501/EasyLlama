@@ -1,0 +1,90 @@
+name: Build and Release
+
+# 推送 v 開頭的 tag 時自動建置並發布 Release，
+# 也可在 Actions 頁面手動觸發（不會建立 Release，只保留產物供下載）。
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: 取得原始碼
+        uses: actions/checkout@v4
+
+      - name: 安裝 .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: 還原套件
+        run: dotnet restore
+
+      - name: 建置 Release
+        run: dotnet build -c Release --no-restore
+
+      - name: 讀取版號
+        id: ver
+        shell: pwsh
+        run: |
+          $xml = [xml](Get-Content 'LlamaVulkanLauncher.csproj')
+          $version = $xml.Project.PropertyGroup.Version | Where-Object { $_ }
+          Write-Host "csproj 版號：$version"
+          "version=$version" >> $env:GITHUB_OUTPUT
+          if ($env:GITHUB_REF -like 'refs/tags/*') {
+            $tag = $env:GITHUB_REF -replace '^refs/tags/', ''
+          } else {
+            $tag = "v$version"
+          }
+          Write-Host "使用標籤：$tag"
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: 組裝發布內容
+        shell: pwsh
+        run: |
+          $stage = "staging/EasyLlama-${{ steps.ver.outputs.tag }}-win-x64"
+          New-Item -ItemType Directory -Force -Path "$stage/config/lang" | Out-Null
+
+          Copy-Item 'bin/Release/LlamaVulkanLauncher.exe' $stage
+          Copy-Item 'bin/Release/LlamaVulkanLauncher.exe.config' $stage
+          Copy-Item 'config/theme.sample.xml' "$stage/config"
+          Copy-Item 'config/lang/zh-TW.sample.xml' "$stage/config/lang"
+          Copy-Item 'README.md' $stage
+          Copy-Item 'LICENSE' $stage
+
+          Write-Host '=== 發布內容 ==='
+          Get-ChildItem -Recurse $stage | Select-Object FullName, Length | Format-Table -AutoSize
+
+          $zip = "EasyLlama-${{ steps.ver.outputs.tag }}-win-x64.zip"
+          Compress-Archive -Path "$stage/*" -DestinationPath $zip -Force
+
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash
+          Write-Host "SHA256: $hash"
+          "$hash  $zip" | Out-File -FilePath 'SHA256SUMS.txt' -Encoding ascii
+
+      - name: 上傳建置產物
+        uses: actions/upload-artifact@v4
+        with:
+          name: EasyLlama-${{ steps.ver.outputs.tag }}-win-x64
+          path: |
+            *.zip
+            SHA256SUMS.txt
+
+      - name: 發布 Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: EasyLlama ${{ steps.ver.outputs.tag }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            *.zip
+            SHA256SUMS.txt

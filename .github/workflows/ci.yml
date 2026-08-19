@@ -1,0 +1,41 @@
+name: CI
+
+# 每次推送與 Pull Request 都驗證專案可正常建置。
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: 取得原始碼
+        uses: actions/checkout@v4
+
+      - name: 安裝 .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: 還原套件
+        run: dotnet restore
+
+      - name: 建置 Release
+        run: dotnet build -c Release --no-restore
+
+      - name: 確認產物存在
+        shell: pwsh
+        run: |
+          $exe = 'bin/Release/LlamaVulkanLauncher.exe'
+          if (-not (Test-Path $exe)) {
+            throw "找不到建置產物：$exe"
+          }
+          $info = (Get-Item $exe).VersionInfo
+          Write-Host "ProductName    : $($info.ProductName)"
+          Write-Host "FileVersion    : $($info.FileVersion)"
+          Write-Host "FileDescription: $($info.FileDescription)"

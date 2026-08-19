@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 顏色格式 #RRGGBB 或 #AARRGGBB，改完存檔重開程式即可套用 -->
+<Theme>
+  <Color key="Header" value="#1C2128" />
+  <Color key="HeaderText" value="#FFFFFF" />
+  <Color key="HeaderSubText" value="#A8B2BE" />
+  <Color key="Start" value="#2EA043" />
+  <Color key="Stop" value="#CF4949" />
+  <Color key="Web" value="#384250" />
+  <Color key="Ok" value="#1A7F37" />
+  <Color key="Bad" value="#CF4949" />
+  <Color key="Muted" value="#6E7681" />
+  <Color key="Window" value="#F4F6F8" />
+  <Color key="Panel" value="#FFFFFF" />
+  <Color key="LogBack" value="#161B22" />
+  <Color key="LogText" value="#C9D1D9" />
+  <Color key="Running" value="#3FB950" />
+  <Color key="Loading" value="#E3B341" />
+</Theme>

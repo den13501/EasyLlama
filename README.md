@@ -4,6 +4,7 @@
 專為 Windows + Vulkan 後端使用情境設計。不必再手動拼湊冗長的命令列參數，
 所有設定都能存成設定檔重複使用。
 
+[![CI](https://github.com/den13501/EasyLlama/actions/workflows/ci.yml/badge.svg)](https://github.com/den13501/EasyLlama/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/den13501/EasyLlama)](https://github.com/den13501/EasyLlama/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -71,6 +72,18 @@ dotnet build -c Release
 > 專案已引用 `Microsoft.NETFramework.ReferenceAssemblies.net481`，
 > 因此**不需要另外安裝 .NET Framework 4.8.1 Developer Pack**，
 > 只要有 .NET SDK 與可連線 nuget.org 的環境即可建置。
+
+### 自動發布
+
+本專案使用 GitHub Actions 自動建置與發布：
+
+- **CI**：推送到 `main` 或開啟 Pull Request 時自動驗證建置
+- **Release**：推送 `v*` 格式的 tag 時，自動編譯並發布 Release，附上 zip 與 SHA256 校驗檔
+
+```powershell
+git tag -a v1.3.0 -m "v1.3.0"
+git push origin v1.3.0
+```
 
 ## 客製化
 

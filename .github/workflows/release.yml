@@ -57,6 +57,7 @@ jobs:
           Copy-Item 'config/theme.sample.xml' "$stage/config"
           Copy-Item 'config/lang/zh-TW.sample.xml' "$stage/config/lang"
           Copy-Item 'README.md' $stage
+          Copy-Item 'CHANGELOG.md' $stage
           Copy-Item 'LICENSE' $stage
 
           Write-Host '=== 發布內容 ==='
@@ -68,6 +69,35 @@ jobs:
           $hash = (Get-FileHash $zip -Algorithm SHA256).Hash
           Write-Host "SHA256: $hash"
           "$hash  $zip" | Out-File -FilePath 'SHA256SUMS.txt' -Encoding ascii
+
+      - name: 取出本版更新說明
+        id: notes
+        shell: pwsh
+        run: |
+          # 從 CHANGELOG.md 抓出對應版號的段落，當作 Release 的說明內文。
+          $tag = '${{ steps.ver.outputs.tag }}'
+          $version = $tag -replace '^v', ''
+          $lines = Get-Content 'CHANGELOG.md'
+          $start = -1
+          $end = $lines.Count
+          for ($i = 0; $i -lt $lines.Count; $i++) {
+            if ($lines[$i] -match "^## \[$([regex]::Escape($version))\]") {
+              $start = $i + 1
+              continue
+            }
+            if ($start -ge 0 -and $lines[$i] -match '^## \[') {
+              $end = $i
+              break
+            }
+          }
+          if ($start -lt 0) {
+            Write-Host "CHANGELOG.md 找不到 $version 的段落，改用自動產生的說明。"
+            '' | Out-File -FilePath 'RELEASE_NOTES.md' -Encoding utf8
+          } else {
+            $lines[$start..($end - 1)] | Out-File -FilePath 'RELEASE_NOTES.md' -Encoding utf8
+            Write-Host "=== 本版更新說明 ==="
+            Get-Content 'RELEASE_NOTES.md'
+          }
 
       - name: 上傳建置產物
         uses: actions/upload-artifact@v4
@@ -84,6 +114,9 @@ jobs:
           name: EasyLlama ${{ steps.ver.outputs.tag }}
           draft: false
           prerelease: false
+          # 先放 CHANGELOG 的內容，後面再接上自動產生的提交清單。
+          body_path: RELEASE_NOTES.md
+          append_body: true
           generate_release_notes: true
           files: |
             *.zip

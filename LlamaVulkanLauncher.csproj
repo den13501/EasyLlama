@@ -14,7 +14,7 @@
     <Product>EasyLlama</Product>
     <AssemblyTitle>EasyLlama - Llama Vulkan 啟動器</AssemblyTitle>
     <Description>llama-server 視覺化啟動與參數設定</Description>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <Authors>den13501</Authors>
     <Copyright>Copyright (c) 2026 den13501</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

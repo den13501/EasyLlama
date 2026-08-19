@@ -176,15 +176,18 @@ namespace LlamaVulkanLauncher
         public static long SuggestOfficeReserveBytes(HardwareInfo info)
         {
             double totalGb = info != null ? BytesToGb(info.TotalMemoryBytes) : 0;
-            if (totalGb >= 48)
+            // 門檻略低於標示容量：作業系統辨識到的記憶體會少於模組標示值
+            // （例如 48 GB 實際約 47.7 GB、32 GB 約 31.8 GB），
+            // 用整數門檻會讓機器掉到低一級的設定。
+            if (totalGb >= 46)
             {
                 return 12L * 1024L * 1024L * 1024L;
             }
-            if (totalGb >= 16)
+            if (totalGb >= 15)
             {
                 return 8L * 1024L * 1024L * 1024L;
             }
-            if (totalGb >= 8)
+            if (totalGb >= 7.5)
             {
                 return 4L * 1024L * 1024L * 1024L;
             }

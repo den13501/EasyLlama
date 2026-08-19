@@ -30,8 +30,12 @@ namespace LlamaVulkanLauncher
             4096, 8192, 16384, 32768, 65536, 131072
         };
 
-        /// <summary>辦公並行模式的上下文上限，超過對日常使用沒有好處。</summary>
-        private const int OfficeMaxContext = 65536;
+        /// <summary>
+        /// 辦公並行模式的上下文上限。
+        /// 實測 24 GB 顯卡跑 27B Q4 模型時，ctx 65536 會越過顯存臨界點而掉到 9 t/s，
+        /// 32768 則能穩定維持 53~63 t/s，因此上限設在 32768。
+        /// </summary>
+        private const int OfficeMaxContext = 32768;
 
         public static TunePlan Build(HardwareInfo hardware, LaunchProfile current, bool office)
         {
@@ -100,9 +104,13 @@ namespace LlamaVulkanLauncher
             next.ContextSize = office ? baseCtx : StepUp(baseCtx);
             if (office && next.ContextSize > OfficeMaxContext)
             {
-                // 辦公情境下 64K 已是甜蜜點，再往上只會拖慢首字延遲。
+                // 辦公情境下 32K 已是甜蜜點，再往上容易越過顯存臨界點。
                 next.ContextSize = OfficeMaxContext;
             }
+
+            // 最後依顯示卡容量再壓一次：剩餘顯存的估算有誤差，
+            // 而越過臨界點的代價（速度剩十分之一）遠大於少開一階。
+            next.ContextSize = CapContextByVram(next.ContextSize, vram);
 
             // 24GB 顯卡扣掉 17GB 模型後大約剩 5~6GB，這個區間就足以支撐 q8_0 的 KV，
             // 因此門檻設在 5GB，而不是先前保守的 24GB。
@@ -110,11 +118,11 @@ namespace LlamaVulkanLauncher
             {
                 next.KvCacheType = LaunchProfile.DefaultKvCacheType;
             }
-            else if (leftover < 3L * 1024L * 1024L * 1024L)
+            else if (leftover < 1024L * 1024L * 1024L)
             {
                 next.KvCacheType = "q4_0";
             }
-            else if (leftover < 5L * 1024L * 1024L * 1024L)
+            else if (leftover < 2L * 1024L * 1024L * 1024L)
             {
                 next.KvCacheType = "q5_0";
             }
@@ -125,31 +133,31 @@ namespace LlamaVulkanLauncher
 
             next.GpuLayers = 99;
             next.Parallel = LaunchProfile.DefaultParallel;
-            // --cache-ram 走系統記憶體：32GB 機器辦公時給 16GB，效能模式或更大記憶體再往上加。
-            double totalGb = SystemResources.BytesToGb(hardware.TotalMemoryBytes);
-            if (totalGb <= 0)
-            {
-                next.CacheRam = LaunchProfile.DefaultCacheRam;
-            }
-            else if (totalGb >= 48)
-            {
-                next.CacheRam = office ? 24576 : 32768;
-            }
-            else if (totalGb >= 24)
-            {
-                next.CacheRam = office ? 16384 : 24576;
-            }
-            else
-            {
-                next.CacheRam = 8192;
-            }
-            next.UbatchSize = (office && leftover >= 0 && leftover < 6L * 1024L * 1024L * 1024L)
+            // --cache-ram 走系統記憶體，而且是「上限值」：長對話會慢慢長到這個數字。
+            // 舊版只看記憶體總量，沒有扣掉模型本身佔用，
+            // 在 32 GB 機器上會建議 16384，加上約 16 GB 的模型快取後正好塞爆，
+            // 實測會讓 Pages Input/sec 飆到 1300 以上（系統瘋狂分頁）。
+            // 因此改成先扣掉模型與系統保留，再從剩餘量分配。
+            next.CacheRam = SuggestCacheRam(hardware, modelBytes, mmprojBytes, office);
+
+            // ubatch 256 是建議值，只有顯存真的所剩無幾時才降到 128。
+            // 舊門檻是 6 GB，但實測顯示 ctx 拉滿也只多吃 2 GB 左右，
+            // 6 GB 餘裕其實非常寬鬆，不需要降批次。
+            next.UbatchSize = (leftover >= 0 && leftover < 2L * 1024L * 1024L * 1024L)
                 ? 128
                 : 256;
             next.FlashAttn = "on";
-            next.NoMmap = true;
 
-            bool specOk = leftover < 0 ? !office : leftover >= 8L * 1024L * 1024L * 1024L;
+            // 「不使用 mmap」會在啟動時把整份模型另外讀進系統記憶體，
+            // 等於在權重之外再吃掉一份等同模型大小的 RAM。
+            // 記憶體不夠時這會逼出分頁（paging），速度反而嚴重下滑，
+            // 因此只有在記憶體明顯寬裕時才建議開啟。
+            next.NoMmap = ShouldSuggestNoMmap(hardware, modelBytes);
+
+            // MTP 推測解碼（draft-mtp）重用主模型的權重，額外開銷主要是 draft KV，
+            // 以 q8_0 存放時只有數百 MB，不需要 8 GB 這種等級的餘裕。
+            // 舊門檻會在顯存充足時就把加速功能關掉，反而讓生成變慢。
+            bool specOk = leftover < 0 ? !office : leftover >= 2L * 1024L * 1024L * 1024L;
             if (specOk)
             {
                 next.EnableSpeculative = true;
@@ -168,11 +176,11 @@ namespace LlamaVulkanLauncher
                 next.EnableSpeculative = false;
             }
 
-            long reserve = SystemResources.SuggestOfficeReserveBytes(hardware);
-            if (next.NoMmap && modelBytes > 0 && hardware.TotalMemoryBytes > 0
-                && modelBytes > hardware.TotalMemoryBytes - reserve)
+            // 記憶體不足以支撐「不使用 mmap」時，說明為什麼建議關掉它。
+            if (!next.NoMmap && current != null && current.NoMmap)
             {
-                warnings.Add("已開 --no-mmap，載入瞬間會先把整份模型讀進 RAM。請先關大型程式再啟動。");
+                warnings.Add("已建議取消「不使用 mmap」：本機記憶體不足以在權重之外"
+                    + "再放一份完整模型，勾著容易觸發分頁而嚴重掉速。改用 mmap 由系統管理較穩定。");
             }
 
             TunePlan plan = new TunePlan();
@@ -183,6 +191,83 @@ namespace LlamaVulkanLauncher
             plan.Changes = Diff(current, next, hardware, leftover, office);
             plan.Summary = BuildSummary(hardware, next, leftover, office, usedFallback);
             return plan;
+        }
+
+        /// <summary>
+        /// 判斷是否建議勾選「不使用 mmap」。
+        /// 這個選項會讓 llama.cpp 把整份模型讀進系統記憶體（--load-mode none），
+        /// 在權重之外額外佔用一份等同模型大小的 RAM。
+        /// 記憶體不足時會觸發分頁而嚴重掉速，因此只在明顯有餘裕時才建議開啟。
+        /// </summary>
+        /// <summary>
+        /// 依「扣掉模型之後還剩多少系統記憶體」建議 --cache-ram（單位 MiB）。
+        /// 這個參數是上限值：長對話會慢慢長到這個數字，因此不能只看記憶體總量。
+        /// 使用 mmap 時模型檔本身也會佔用等量的檔案快取，必須一併扣除。
+        /// </summary>
+        private static int SuggestCacheRam(
+            HardwareInfo hardware, long modelBytes, long mmprojBytes, bool office)
+        {
+            if (hardware == null || hardware.TotalMemoryBytes <= 0)
+            {
+                return LaunchProfile.DefaultCacheRam;
+            }
+
+            long reserve = SystemResources.SuggestOfficeReserveBytes(hardware);
+            long spare = hardware.TotalMemoryBytes - reserve - modelBytes - mmprojBytes;
+            double spareGb = SystemResources.BytesToGb(spare);
+
+            if (spareGb <= 0)
+            {
+                // 連模型都快放不下，快取只能給最低限度。
+                return 2048;
+            }
+
+            // 只拿剩餘量的一半來當快取，另一半留給突發需求，
+            // 避免長對話跑久了才把記憶體吃光。
+            int mib = (int)(spareGb * 1024 / 2);
+
+            // 辦公情境再保守一些，把核心讓給其他程式。
+            if (office)
+            {
+                mib = mib / 2;
+            }
+
+            if (mib < 2048) { return 2048; }
+            if (mib > 32768) { return 32768; }
+
+            // 對齊到 1024 的倍數，數字比較好讀。
+            return (mib / 1024) * 1024;
+        }
+
+        /// <summary>依實際選出的 KV cache 型別給對應說明。</summary>
+        private static string KvCacheReason(string kvType)
+        {
+            if (string.Equals(kvType, "q4_0", StringComparison.OrdinalIgnoreCase))
+            {
+                return "顯存所剩無幾，用 q4_0 省 KV";
+            }
+            if (string.Equals(kvType, "q5_0", StringComparison.OrdinalIgnoreCase))
+            {
+                return "顯存偏緊，用 q5_0 兼顧品質與容量";
+            }
+            return "顯存充足，用 q8_0 保留品質";
+        }
+
+        private static bool ShouldSuggestNoMmap(HardwareInfo hardware, long modelBytes)
+        {
+            // 資訊不足時一律不建議：mmap 是 llama.cpp 預設值，也是較安全的選擇。
+            if (hardware == null || hardware.TotalMemoryBytes <= 0 || modelBytes <= 0)
+            {
+                return false;
+            }
+
+            // 除了模型本身，還要留給作業系統與其他辦公軟體使用。
+            long reserve = SystemResources.SuggestOfficeReserveBytes(hardware);
+            long usable = hardware.TotalMemoryBytes - reserve;
+
+            // 需要能同時容納「模型副本」與「等量的檔案快取／工作區」才算寬裕，
+            // 因此門檻設在模型大小的兩倍。
+            return usable >= modelBytes * 2L;
         }
 
         public static void CopyTunable(LaunchProfile src, LaunchProfile dest)
@@ -284,28 +369,29 @@ namespace LlamaVulkanLauncher
                 leftover < 0
                     ? "顯存或模型尚未齊，先用保守值"
                     : "依剩顯存約 " + SystemResources.FormatGb(leftover) + " 分檔");
+            // 理由要跟實際選出的型別一致，否則會出現「說 q4_0 卻填 q8_0」的矛盾。
             AddIfChanged(list, "KV cache",
                 Blank(current.KvCacheType), Blank(next.KvCacheType),
-                leftover >= 0 && leftover < 6L * 1024L * 1024L * 1024L
-                    ? "顯存較緊，用 q4_0 省 KV"
-                    : "一般情況用 q5_0，兼顧品質與顯存");
+                KvCacheReason(next.KvCacheType));
             AddIfChanged(list, "GPU 層數 --n-gpu-layers",
                 current.GpuLayers.ToString(), next.GpuLayers.ToString(),
                 "權重盡量上 GPU");
             AddIfChanged(list, "ubatch -ub",
                 current.UbatchSize.ToString(), next.UbatchSize.ToString(),
-                next.UbatchSize <= 128 ? "顯存較緊，降低批次" : "維持預設 256");
+                next.UbatchSize <= 128 ? "顯存所剩無幾，降低批次" : "維持建議值 256");
             AddIfChanged(list, "Flash Attention",
                 Blank(current.FlashAttn), Blank(next.FlashAttn),
                 "Vulkan 建議開啟");
-            AddIfChanged(list, "停用 mmap",
+            AddIfChanged(list, "不使用 mmap（整份讀進記憶體）",
                 current.NoMmap ? "是" : "否", next.NoMmap ? "是" : "否",
-                "與既有 BAT 預設相同");
+                next.NoMmap
+                    ? "記憶體充裕，載入後較穩定"
+                    : "改用 mmap 省下一份模型大小的記憶體");
             AddIfChanged(list, "推測解碼",
                 FormatSpec(current), FormatSpec(next),
                 next.EnableSpeculative
-                    ? "剩顯存足夠，維持 draft-mtp"
-                    : "剩顯存不足約 8 GB，先關閉以免擠爆");
+                    ? "剩顯存足夠，維持 draft-mtp 以加速生成"
+                    : "剩顯存不足約 2 GB，先關閉以免擠爆");
             return list.ToArray();
         }
 
@@ -375,34 +461,66 @@ namespace LlamaVulkanLauncher
             return sb.ToString();
         }
 
+        /// <summary>
+        /// 依顯示卡容量再壓一次上下文上限。
+        /// 顯示卡不會讓單一程式用滿標示容量，實測 24 GB 的卡大約在 18.5 GB 就觸頂，
+        /// 越過之後資料會被放到系統記憶體，速度直接掉到十分之一。
+        /// 「剩餘顯存」的估算難免有誤差，因此這裡用顯存總量再設一道保險。
+        /// </summary>
+        private static int CapContextByVram(int ctx, long vramBytes)
+        {
+            if (vramBytes <= 0)
+            {
+                return ctx;
+            }
+
+            double vramGb = SystemResources.BytesToGb(vramBytes);
+            int cap;
+            if (vramGb >= 44) { cap = 131072; }
+            else if (vramGb >= 30) { cap = 65536; }
+            else if (vramGb >= 20) { cap = 32768; }   // 24 GB 卡實測 65536 會掉速
+            else if (vramGb >= 14) { cap = 16384; }
+            else { cap = 8192; }
+
+            return ctx > cap ? cap : ctx;
+        }
+
         private static int ContextFromLeftover(long leftover)
         {
             if (leftover < 0)
             {
                 return 16384;
             }
-            long gb3 = 3L * 1024L * 1024L * 1024L;
-            long gb6 = 6L * 1024L * 1024L * 1024L;
-            long gb10 = 10L * 1024L * 1024L * 1024L;
-            long gb16 = 16L * 1024L * 1024L * 1024L;
-            long gb24 = 24L * 1024L * 1024L * 1024L;
-            if (leftover < gb3)
+            // 門檻依「長對話負載」實測校正
+            // （RX 7900 XTX 24GB / Qwen3.8-27B Q4_K_M / KV q8_0 / -fa on / draft-mtp）：
+            //
+            //   ctx  16384 → 顯存 17.41 GB → 56~59 t/s   正常
+            //   ctx  32768 → 顯存 17.92 GB → 53~63 t/s   正常
+            //   ctx  65536 → 顯存 18.91 GB →  8.6~9 t/s  嚴重掉速
+            //
+            // 顯存只多用約 1 GB，速度卻掉到七分之一：超過顯示卡實際可用上限後，
+            // 部分資料被迫放到系統記憶體，每次推論都要走 PCIe。
+            // 注意這與「實際用到多深」無關 —— KV cache 在啟動時就依 ctx 上限
+            // 全量配置，所以 ctx 65536 即使只用 2000 token 一樣只有 9 t/s。
+            //
+            // 因此門檻必須保守：寧可少開一階，也不要越過臨界點。
+            // 另外顯示卡不會讓單一程式用滿標示容量（24 GB 卡實測約 18.5 GB 就觸頂），
+            // 呼叫端還會再用 CapContextByVram 依顯存總量設上限。
+            long gb1 = 1024L * 1024L * 1024L;
+            if (leftover < 2L * gb1)
             {
+                // 幾乎沒有餘裕，先求載得進去。
                 return 4096;
             }
-            if (leftover < gb6)
-            {
-                return 8192;
-            }
-            if (leftover < gb10)
+            if (leftover < 4L * gb1)
             {
                 return 16384;
             }
-            if (leftover < gb16)
+            if (leftover < 8L * gb1)
             {
                 return 32768;
             }
-            if (leftover < gb24)
+            if (leftover < 14L * gb1)
             {
                 return 65536;
             }

@@ -79,7 +79,9 @@ namespace LlamaVulkanLauncher
             Reasoning = DefaultReasoning;
             FlashAttn = DefaultFlashAttn;
             UbatchSize = DefaultUbatchSize;
-            NoMmap = true;
+            // 預設交給 llama.cpp 自行決定（實際會使用 mmap），記憶體佔用較低也較安全。
+            // 記憶體確實寬裕時，可在「本機最佳化」由程式判斷後建議開啟。
+            NoMmap = false;
             ImageMinTokens = DefaultImageMinTokens;
             EnableSpeculative = true;
             SpecType = DefaultSpecType;

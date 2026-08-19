@@ -17,12 +17,16 @@ config/lang/*.xml
 # 本機可攜環境專用的套件來源備份
 NuGet.Config.portable-backup
 
+# 基準測試輸出（含本機路徑與硬體資訊）
+tools/bench-out/
+
 # 打包輸出
 release/
 staging/
 staging-test/
 *.zip
 SHA256SUMS.txt
+RELEASE_NOTES.md
 
 # Visual Studio / Rider
 .vs/

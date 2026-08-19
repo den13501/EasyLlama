@@ -1,0 +1,28 @@
+# 編譯產物
+bin/
+obj/
+*.exe
+*.pdb
+*.dll
+*.cache
+
+# 使用者個人設定（含本機路徑與模型名稱，請勿上傳）
+config/settings.xml
+config/settings.backup-*.xml
+config/language.txt
+config/theme.xml
+config/lang/*.xml
+!config/lang/*.sample.xml
+
+# 本機可攜環境專用的套件來源備份
+NuGet.Config.portable-backup
+
+# 打包輸出
+release/
+*.zip
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo

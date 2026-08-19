@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net481</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>LlamaVulkanLauncher</AssemblyName>
+    <RootNamespace>LlamaVulkanLauncher</RootNamespace>
+    <Deterministic>true</Deterministic>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Prefer32Bit>false</Prefer32Bit>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>llama.ico</ApplicationIcon>
+    <Product>EasyLlama</Product>
+    <AssemblyTitle>EasyLlama - Llama Vulkan 啟動器</AssemblyTitle>
+    <Description>llama-server 視覺化啟動與參數設定</Description>
+    <Version>1.2.0</Version>
+    <Authors>den13501</Authors>
+    <Copyright>Copyright (c) 2026 den13501</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/den13501/EasyLlama</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/den13501/EasyLlama</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 圖示同時嵌入為資源，讓視窗與工作列可在執行期取用 -->
+    <EmbeddedResource Include="llama.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net481" Version="1.0.3">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>

@@ -98,7 +98,10 @@ namespace LlamaVulkanLauncher
 
         public MainForm()
         {
-            Text = Strings.Get("App.Title");
+            // 視窗標題也帶上版本，工作列與截圖都看得到。
+            string appVersion = GetAppVersion();
+            Text = Strings.Get("App.Title")
+                + (string.IsNullOrEmpty(appVersion) ? "" : "  v" + appVersion);
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(1040, 720);
             Size = new Size(1180, 840);
@@ -132,7 +135,9 @@ namespace LlamaVulkanLauncher
 
             Panel command = BuildCommandPanel();
             command.Dock = DockStyle.Bottom;
-            command.Height = 96;
+            // 指令通常四到五列就放得下，面板只留必要高度，
+            // 多出來的空間讓給上方的執行紀錄。
+            command.Height = 118;
 
             Panel log = BuildLogPanel();
             log.Dock = DockStyle.Fill;
@@ -166,8 +171,9 @@ namespace LlamaVulkanLauncher
             {
                 try
                 {
+                    // 紀錄區預設給約 190px，開機訊息與載入進度不必馬上捲動。
                     split.SplitterDistance = Math.Max(split.Panel1MinSize,
-                        split.ClientSize.Height - 150);
+                        split.ClientSize.Height - 190);
                 }
                 catch (Exception ex)
                 {
@@ -188,6 +194,14 @@ namespace LlamaVulkanLauncher
             title.ForeColor = Theme.HeaderText;
             title.Font = new Font(Font.FontFamily, 14f, FontStyle.Bold);
             title.Location = new Point(16, 8);
+
+            // 版本號緊接在標題後面，回報問題時比較容易確認版本。
+            Label version = new Label();
+            version.AutoSize = true;
+            version.Text = "v" + GetAppVersion();
+            version.ForeColor = Theme.HeaderSubText;
+            version.Font = new Font(Font.FontFamily, 9f);
+            version.Location = new Point(16, 14);
 
             Label sub = new Label();
             sub.AutoSize = true;
@@ -234,8 +248,35 @@ namespace LlamaVulkanLauncher
 
             panel.Controls.Add(right);
             panel.Controls.Add(title);
+            panel.Controls.Add(version);
             panel.Controls.Add(sub);
+
+            // 標題是 AutoSize，換語言後寬度會變，
+            // 因此版本號的位置等版面算完再對齊，避免文字重疊。
+            title.SizeChanged += delegate
+            {
+                version.Left = title.Right + 8;
+            };
+            version.Left = title.Right + 8;
             return panel;
+        }
+
+        /// <summary>取組件版本，只顯示到修訂號以前（例如 1.3.0）。</summary>
+        private static string GetAppVersion()
+        {
+            try
+            {
+                Version v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                if (v != null)
+                {
+                    return v.Major + "." + v.Minor + "." + v.Build;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("讀取版本失敗：" + ex.Message);
+            }
+            return "";
         }
 
         /// <summary>
@@ -482,9 +523,12 @@ namespace LlamaVulkanLauncher
             AddLabeled(table, 6, Strings.Get("Field.Ubatch"), WithHint(_numUbatch, Strings.Get("Hint.Ubatch")));
             _chkNoMmap = new CheckBox();
             _chkNoMmap.Text = Strings.Get("Check.NoMmap");
-            _chkNoMmap.AutoSize = true;
+            // 這段說明較長，交給 WithHint 固定寬度排版，AutoSize 會與其衝突而裁掉文字。
+            _chkNoMmap.AutoSize = false;
+            _chkNoMmap.Width = 330;
             _chkNoMmap.CheckedChanged += OnFieldChanged;
-            AddLabeled(table, 7, Strings.Get("Field.LoadMode"), _chkNoMmap);
+            AddLabeled(table, 7, Strings.Get("Field.LoadMode"),
+                WithHint(_chkNoMmap, Strings.Get("Hint.NoMmap")));
             _numImageTokens = MakeNum(0, 100000, 1024, 0);
             AddLabeled(table, 8, Strings.Get("Field.ImageMinTokens"),
                 WithHint(_numImageTokens, Strings.Get("Hint.ImageMinTokens")));
@@ -527,23 +571,34 @@ namespace LlamaVulkanLauncher
         private TabPage BuildOptimizeTab()
         {
             TabPage page = new TabPage(Strings.Get("Tab.Optimize"));
-            TableLayoutPanel table = CreateFormTable(6);
-            table.RowStyles[0] = new RowStyle(SizeType.Absolute, 104f);
-            table.RowStyles[1] = new RowStyle(SizeType.Absolute, 120f);
-            table.RowStyles[2] = new RowStyle(SizeType.Absolute, 44f);
+            TableLayoutPanel table = CreateFormTable(7);
+            // 這幾列的高度貼著實際文字行數給，避免整頁出現大片空白。
+            table.RowStyles[0] = new RowStyle(SizeType.Absolute, 52f);
+            table.RowStyles[1] = new RowStyle(SizeType.Absolute, 80f);
+            table.RowStyles[2] = new RowStyle(SizeType.Absolute, 84f);
+            table.RowStyles[3] = new RowStyle(SizeType.Absolute, 40f);
+
+            // 先講清楚建議值是針對哪種機器調校的，避免使用者照抄到不合適的環境。
+            Label scope = new Label();
+            scope.Dock = DockStyle.Fill;
+            scope.TextAlign = ContentAlignment.TopLeft;
+            scope.Padding = new Padding(0, 6, 8, 0);
+            scope.ForeColor = ColorMuted;
+            scope.Text = Strings.Get("Msg.TunerScope");
+            AddLabeled(table, 0, Strings.Get("Field.TunerScope"), scope);
 
             // 這兩段文字較長，改為靠上對齊並允許多行，避免內容被切掉。
             _lblHwInfo = new Label();
             _lblHwInfo.Dock = DockStyle.Fill;
             _lblHwInfo.TextAlign = ContentAlignment.TopLeft;
             _lblHwInfo.Padding = new Padding(0, 6, 8, 0);
-            AddLabeled(table, 0, Strings.Get("Field.HardwareInfo"), _lblHwInfo);
+            AddLabeled(table, 1, Strings.Get("Field.HardwareInfo"), _lblHwInfo);
 
             _lblHwAdvice = new Label();
             _lblHwAdvice.Dock = DockStyle.Fill;
             _lblHwAdvice.TextAlign = ContentAlignment.TopLeft;
             _lblHwAdvice.Padding = new Padding(0, 6, 8, 0);
-            AddLabeled(table, 1, Strings.Get("Field.FirstAdvice"), _lblHwAdvice);
+            AddLabeled(table, 2, Strings.Get("Field.FirstAdvice"), _lblHwAdvice);
 
             // 按鈕改用流動配置，換語言後不會因文字變長而互相重疊。
             FlowLayoutPanel actions = new FlowLayoutPanel();
@@ -562,16 +617,16 @@ namespace LlamaVulkanLauncher
             actions.Controls.Add(office);
             actions.Controls.Add(perf);
             actions.Controls.Add(refresh);
-            AddLabeled(table, 2, Strings.Get("Field.QuickApply"), actions);
+            AddLabeled(table, 3, Strings.Get("Field.QuickApply"), actions);
 
             // 執行緒提示會隨硬體偵測更新，因此保留欄位參考並沿用共用的說明版面。
             _numThreads = MakeNum(-1, 256, -1, 0);
             Panel threadRow = WithHint(_numThreads, Strings.Get("Hint.Threads"));
             _lblThreadHint = FindHintLabel(threadRow);
-            AddLabeled(table, 3, Strings.Get("Field.Threads"), threadRow);
+            AddLabeled(table, 4, Strings.Get("Field.Threads"), threadRow);
 
             _numThreadsBatch = MakeNum(-1, 256, -1, 0);
-            AddLabeled(table, 4, Strings.Get("Field.ThreadsBatch"),
+            AddLabeled(table, 5, Strings.Get("Field.ThreadsBatch"),
                 WithHint(_numThreadsBatch, Strings.Get("Hint.ThreadsBatch")));
 
             _cboPrio = MakeCombo(false, new string[]
@@ -583,7 +638,7 @@ namespace LlamaVulkanLauncher
                 "high"
             });
             _cboPrio.SelectedIndex = 0;
-            AddLabeled(table, 5, Strings.Get("Field.Priority"), _cboPrio);
+            AddLabeled(table, 6, Strings.Get("Field.Priority"), _cboPrio);
 
             page.Controls.Add(MakeScrollHost(table));
             return page;
@@ -640,8 +695,10 @@ namespace LlamaVulkanLauncher
             _txtCommand.ScrollBars = ScrollBars.Vertical;
             _txtCommand.Font = new Font("Consolas", 8.75f);
             _txtCommand.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            _txtCommand.Location = new Point(12, 30);
-            _txtCommand.Size = new Size(800, 56);
+            // 指令通常會換行好幾列，這裡跟著面板一起加高。
+            _txtCommand.WordWrap = true;
+            _txtCommand.Location = new Point(12, 28);
+            _txtCommand.Size = new Size(800, 78);
 
             panel.Controls.Add(label);
             panel.Controls.Add(copy);
@@ -1190,7 +1247,12 @@ namespace LlamaVulkanLauncher
                 return;
             }
 
+            // 啟動等於認可目前畫面上的設定，順手寫回磁碟。
+            // 否則使用者調完參數直接按啟動，下次開啟程式會讀到舊值，
+            // 造成「明明改過了，怎麼又跑回去」的困惑。
             SaveCurrentIntoState();
+            ProfileStore.Save(_state);
+
             LaunchProfile profile = ReadUi();
             string[] errors = CommandBuilder.Validate(profile);
             if (errors.Length > 0)
